@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Garbage Blackspot Mapper</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-title">🗑️ Garbage Blackspot Mapper</h1>
+            <button id="addSpotBtn" class="btn-primary">+ Add Blackspot</button>
+        </div>
+    </nav>
+
+    <!-- Main Map Container -->
+    <div id="map"></div>
+
+    <!-- Modal for Adding Blackspot -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Report a Garbage Blackspot</h2>
+                <span class="close">&times;</span>
+            </div>
+            
+            <form id="spotForm" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="title">Title (Optional)</label>
+                    <input type="text" id="title" name="title" placeholder="e.g., Corner of Main St & 5th Ave">
+                </div>
+
+                <div class="form-group">
+                    <label for="image">Upload Photo *</label>
+                    <input type="file" id="image" name="image" accept="image/*" required>
+                    <div id="imagePreview" class="image-preview"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>Select Location *</label>
+                    <div class="location-buttons">
+                        <button type="button" id="useGpsBtn" class="btn-secondary">📍 Use My Location</button>
+                        <button type="button" id="pickMapBtn" class="btn-secondary">🗺️ Pick on Map</button>
+                    </div>
+                    <div id="coordsDisplay" class="coords-display"></div>
+                </div>
+
+                <!-- Selection Map (hidden by default) -->
+                <div id="selectionMapContainer" class="selection-map-container" style="display: none;">
+                    <p class="instruction">Click anywhere on the map to drop a pin:</p>
+                    <div id="selectionMap" class="selection-map"></div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" id="cancelBtn" class="btn-cancel">Cancel</button>
+                    <button type="submit" id="submitBtn" class="btn-submit">Submit Blackspot</button>
+                </div>
+
+                <div id="formMessage" class="form-message"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+        <div class="spinner"></div>
+        <p>Uploading...</p>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
