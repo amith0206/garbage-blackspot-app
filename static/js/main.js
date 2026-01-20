@@ -1,79 +1,129 @@
-// ---------------- MAP ----------------
-const map = L.map('map').setView([12.9716, 77.5946], 13);
+let mainMap, selectionMap, selectionMarker;
+let selectedLat = null;
+let selectedLng = null;
+
+/* ---------------- MAIN MAP ---------------- */
+mainMap = L.map('map').setView([12.9716, 77.5946], 13);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19
-}).addTo(map);
+    maxZoom: 19
+}).addTo(mainMap);
 
-// Icons
-const icons = {
-  garbage: L.icon({ iconUrl: '/static/icons/garbage.png', iconSize: [32,32] }),
-  broken_footpath: L.icon({ iconUrl: '/static/icons/broken.png', iconSize: [32,32] }),
-  blocked_footpath: L.icon({ iconUrl: '/static/icons/blocked.png', iconSize: [32,32] })
-};
-
-// Load existing issues
+/* ---------------- LOAD ISSUES ---------------- */
 fetch('/api/issues')
-  .then(res => res.json())
-  .then(data => {
-    data.forEach(issue => {
-      L.marker(
-        [issue.latitude, issue.longitude],
-        { icon: icons[issue.issue_type] }
-      )
-      .addTo(map)
-      .bindPopup(issue.title || issue.issue_type);
+    .then(res => res.json())
+    .then(data => {
+        data.forEach(issue => {
+            L.marker([issue.latitude, issue.longitude]).addTo(mainMap)
+                .bindPopup(issue.title || issue.issue_type);
+        });
     });
-  });
 
-// ---------------- MODAL LOGIC ----------------
-const modal = document.getElementById('issueModal');
-const openBtn = document.getElementById('reportBtn');
-const closeBtn = document.getElementById('closeModal');
+/* ---------------- MODAL LOGIC ---------------- */
+const modal = document.getElementById('modal');
+const addBtn = document.getElementById('addSpotBtn');
+const closeBtn = document.querySelector('.close');
+const cancelBtn = document.getElementById('cancelBtn');
 
-openBtn.onclick = () => modal.style.display = 'block';
-closeBtn.onclick = () => modal.style.display = 'none';
+addBtn.onclick = () => modal.style.display = 'block';
+closeBtn.onclick = cancelBtn.onclick = () => closeModal();
 
-window.onclick = (e) => {
-  if (e.target === modal) modal.style.display = 'none';
+function closeModal() {
+    modal.style.display = 'none';
+    resetForm();
+}
+
+/* ---------------- IMAGE PREVIEW ---------------- */
+document.getElementById('image').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+        document.getElementById('imagePreview').innerHTML =
+            `<img src="${ev.target.result}">`;
+    };
+    reader.readAsDataURL(file);
+    validateForm();
+});
+
+/* ---------------- LOCATION ---------------- */
+document.getElementById('useGpsBtn').onclick = () => {
+    navigator.geolocation.getCurrentPosition(pos => {
+        selectedLat = pos.coords.latitude;
+        selectedLng = pos.coords.longitude;
+        updateCoords();
+        hideSelectionMap();
+    });
 };
 
-// ---------------- FORM SUBMIT ----------------
-let userLat = null;
-let userLng = null;
+document.getElementById('pickMapBtn').onclick = () => {
+    showSelectionMap();
+};
 
-// Get location
-navigator.geolocation.getCurrentPosition(
-  pos => {
-    userLat = pos.coords.latitude;
-    userLng = pos.coords.longitude;
-  },
-  () => alert("Location permission is required")
-);
+function showSelectionMap() {
+    document.getElementById('selectionMapContainer').style.display = 'block';
 
-document.getElementById('issueForm').addEventListener('submit', function(e) {
-  e.preventDefault();
+    if (!selectionMap) {
+        selectionMap = L.map('selectionMap').setView([12.9716, 77.5946], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(selectionMap);
 
-  if (!userLat || !userLng) {
-    alert("Location not available");
-    return;
-  }
+        selectionMap.on('click', e => {
+            selectedLat = e.latlng.lat;
+            selectedLng = e.latlng.lng;
 
-  const formData = new FormData();
-  formData.append('issue_type', document.getElementById('issueType').value);
-  formData.append('title', document.getElementById('title').value);
-  formData.append('latitude', userLat);
-  formData.append('longitude', userLng);
-  formData.append('image', document.getElementById('image').files[0]);
+            if (selectionMarker) selectionMap.removeLayer(selectionMarker);
+            selectionMarker = L.marker([selectedLat, selectedLng]).addTo(selectionMap);
 
-  fetch('/api/issues', {
-    method: 'POST',
-    body: formData
-  })
-  .then(res => res.json())
-  .then(() => {
-    alert('Issue reported successfully!');
-    location.reload();
-  })
-  .catch(() => alert('Error submitting issue'));
+            updateCoords();
+        });
+    }
+
+    setTimeout(() => selectionMap.invalidateSize(), 200);
+}
+
+function hideSelectionMap() {
+    document.getElementById('selectionMapContainer').style.display = 'none';
+}
+
+function updateCoords() {
+    const el = document.getElementById('coordsDisplay');
+    el.textContent = `Selected: ${selectedLat.toFixed(6)}, ${selectedLng.toFixed(6)}`;
+    el.classList.add('active');
+    validateForm();
+}
+
+/* ---------------- FORM VALIDATION ---------------- */
+function validateForm() {
+    const imageOk = document.getElementById('image').files.length > 0;
+    const locationOk = selectedLat !== null && selectedLng !== null;
+    document.getElementById('submitBtn').disabled = !(imageOk && locationOk);
+}
+
+/* ---------------- SUBMIT ---------------- */
+document.getElementById('spotForm').addEventListener('submit', e => {
+    e.preventDefault();
+    if (!selectedLat || !selectedLng) return;
+
+    document.getElementById('loadingOverlay').style.display = 'flex';
+
+    const fd = new FormData();
+    fd.append('issue_type', document.getElementById('issueType').value);
+    fd.append('title', document.getElementById('title').value);
+    fd.append('latitude', selectedLat);
+    fd.append('longitude', selectedLng);
+    fd.append('image', document.getElementById('image').files[0]);
+
+    fetch('/api/issues', { method: 'POST', body: fd })
+        .then(() => location.reload());
 });
+
+/* ---------------- RESET ---------------- */
+function resetForm() {
+    selectedLat = selectedLng = null;
+    document.getElementById('spotForm').reset();
+    document.getElementById('imagePreview').innerHTML = '';
+    document.getElementById('coordsDisplay').textContent = 'No location selected';
+    document.getElementById('coordsDisplay').classList.remove('active');
+    document.getElementById('submitBtn').disabled = true;
+    hideSelectionMap();
+}
