@@ -1,33 +1,59 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8" />
   <title>Civic Issue Mapper</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+  <!-- Custom CSS -->
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
 
+<!-- NAVBAR -->
 <nav class="navbar">
   <h2>🗑️🚶 Civic Issue Mapper</h2>
-  <button id="openModal">+ Report Issue</button>
+  <button id="reportBtn" class="btn-primary">+ Report Issue</button>
 </nav>
 
+<!-- MAP -->
 <div id="map"></div>
 
-<div id="modal" class="modal">
-  <form id="issueForm">
-    <select id="issueType" required>
-      <option value="garbage">🗑️ Garbage</option>
-      <option value="broken_footpath">🚶 Broken Footpath</option>
-      <option value="blocked_footpath">🚧 Blocked Footpath</option>
-    </select>
-    <input type="text" id="title" placeholder="Optional description"/>
-    <input type="file" id="image" required/>
-    <button type="submit">Submit</button>
-  </form>
+<!-- MODAL -->
+<div id="issueModal" class="modal">
+  <div class="modal-content">
+    <span id="closeModal" class="close">&times;</span>
+    <h3>Report an Issue</h3>
+
+    <form id="issueForm">
+      <label>Issue Type</label>
+      <select id="issueType" required>
+        <option value="garbage">🗑️ Garbage</option>
+        <option value="broken_footpath">🚶 Broken Footpath</option>
+        <option value="blocked_footpath">🚧 Blocked Footpath</option>
+      </select>
+
+      <label>Description (optional)</label>
+      <input type="text" id="title" placeholder="Short description" />
+
+      <label>Photo *</label>
+      <input type="file" id="image" accept="image/*" required />
+
+      <p class="hint">📍 Location will be auto-detected</p>
+
+      <button type="submit" class="btn-submit">Submit</button>
+    </form>
+  </div>
 </div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<!-- Custom JS -->
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
 </body>
 </html>
