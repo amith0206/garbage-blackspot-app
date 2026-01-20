@@ -9,23 +9,25 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19
 }).addTo(mainMap);
 
-/* ---------------- LOAD ISSUES ---------------- */
+/* ---------------- LOAD ISSUES (FAIL-SAFE) ---------------- */
 fetch('/api/issues')
     .then(res => res.json())
     .then(data => {
         data.forEach(issue => {
-            L.marker([issue.latitude, issue.longitude]).addTo(mainMap)
+            L.marker([issue.latitude, issue.longitude])
+                .addTo(mainMap)
                 .bindPopup(issue.title || issue.issue_type);
         });
-    });
+    })
+    .catch(() => console.warn("Issues API failed, map still loaded"));
 
-/* ---------------- MODAL LOGIC ---------------- */
+/* ---------------- MODAL ---------------- */
 const modal = document.getElementById('modal');
-const addBtn = document.getElementById('addSpotBtn');
+const openBtn = document.getElementById('addSpotBtn');
 const closeBtn = document.querySelector('.close');
 const cancelBtn = document.getElementById('cancelBtn');
 
-addBtn.onclick = () => modal.style.display = 'block';
+openBtn.onclick = () => modal.style.display = 'block';
 closeBtn.onclick = cancelBtn.onclick = () => closeModal();
 
 function closeModal() {
@@ -56,28 +58,27 @@ document.getElementById('useGpsBtn').onclick = () => {
     });
 };
 
-document.getElementById('pickMapBtn').onclick = () => {
-    showSelectionMap();
-};
+document.getElementById('pickMapBtn').onclick = () => showSelectionMap();
 
 function showSelectionMap() {
     document.getElementById('selectionMapContainer').style.display = 'block';
 
     if (!selectionMap) {
         selectionMap = L.map('selectionMap').setView([12.9716, 77.5946], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(selectionMap);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
+            .addTo(selectionMap);
 
         selectionMap.on('click', e => {
             selectedLat = e.latlng.lat;
             selectedLng = e.latlng.lng;
 
             if (selectionMarker) selectionMap.removeLayer(selectionMarker);
-            selectionMarker = L.marker([selectedLat, selectedLng]).addTo(selectionMap);
+            selectionMarker = L.marker([selectedLat, selectedLng])
+                .addTo(selectionMap);
 
             updateCoords();
         });
     }
-
     setTimeout(() => selectionMap.invalidateSize(), 200);
 }
 
@@ -92,7 +93,7 @@ function updateCoords() {
     validateForm();
 }
 
-/* ---------------- FORM VALIDATION ---------------- */
+/* ---------------- VALIDATION ---------------- */
 function validateForm() {
     const imageOk = document.getElementById('image').files.length > 0;
     const locationOk = selectedLat !== null && selectedLng !== null;
