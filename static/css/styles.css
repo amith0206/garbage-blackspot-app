@@ -35,3 +35,14 @@
   padding: 10px;
   width: 100%;
 }
+
+/* 🔒 HARD SAFETY: MAP MUST ALWAYS RENDER */
+html, body {
+    height: 100%;
+}
+
+#map {
+    min-height: calc(100vh - 73px);
+    width: 100%;
+}
+
