@@ -1,52 +1,95 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Civic Issue Mapper</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Civic Issue Mapper</title>
 
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-  <!-- Custom CSS -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
 
-<!-- NAVBAR -->
+<!-- Navigation Bar -->
 <nav class="navbar">
-  <h2>🗑️🚶 Civic Issue Mapper</h2>
-  <button id="reportBtn" class="btn-primary">+ Report Issue</button>
+    <div class="nav-container">
+        <h1 class="nav-title">🗑️🚶 Civic Issue Mapper</h1>
+        <button id="addSpotBtn" class="btn-primary">+ Report Issue</button>
+    </div>
 </nav>
 
-<!-- MAP -->
+<!-- Main Map -->
 <div id="map"></div>
 
-<!-- MODAL -->
-<div id="issueModal" class="modal">
-  <div class="modal-content">
-    <span id="closeModal" class="close">&times;</span>
-    <h3>Report an Issue</h3>
+<!-- Modal -->
+<div id="modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Report Civic Issue</h2>
+            <span class="close">&times;</span>
+        </div>
 
-    <form id="issueForm">
-      <label>Issue Type</label>
-      <select id="issueType" required>
-        <option value="garbage">🗑️ Garbage</option>
-        <option value="broken_footpath">🚶 Broken Footpath</option>
-        <option value="blocked_footpath">🚧 Blocked Footpath</option>
-      </select>
+        <form id="spotForm" enctype="multipart/form-data">
 
-      <label>Description (optional)</label>
-      <input type="text" id="title" placeholder="Short description" />
+            <!-- Issue Type -->
+            <div class="form-group">
+                <label>Issue Type *</label>
+                <select id="issueType" class="btn-secondary" required>
+                    <option value="garbage">🗑️ Garbage</option>
+                    <option value="broken_footpath">🚶 Broken Footpath</option>
+                    <option value="blocked_footpath">🚧 Blocked Footpath</option>
+                </select>
+            </div>
 
-      <label>Photo *</label>
-      <input type="file" id="image" accept="image/*" required />
+            <!-- Title -->
+            <div class="form-group">
+                <label>Description (Optional)</label>
+                <input type="text" id="title" placeholder="Short description">
+            </div>
 
-      <p class="hint">📍 Location will be auto-detected</p>
+            <!-- Image -->
+            <div class="form-group">
+                <label>Upload Photo *</label>
+                <input type="file" id="image" accept="image/*" required>
+                <div id="imagePreview" class="image-preview"></div>
+            </div>
 
-      <button type="submit" class="btn-submit">Submit</button>
-    </form>
-  </div>
+            <!-- Location -->
+            <div class="form-group">
+                <label>Select Location *</label>
+                <div class="location-buttons">
+                    <button type="button" id="useGpsBtn" class="btn-secondary">📍 Use My Location</button>
+                    <button type="button" id="pickMapBtn" class="btn-secondary">🗺️ Pick on Map</button>
+                </div>
+                <div id="coordsDisplay" class="coords-display">No location selected</div>
+            </div>
+
+            <!-- Selection Map -->
+            <div id="selectionMapContainer" class="selection-map-container" style="display:none;">
+                <p class="instruction">Click on the map to drop a pin</p>
+                <div id="selectionMap" class="selection-map"></div>
+            </div>
+
+            <!-- Actions -->
+            <div class="form-actions">
+                <button type="button" id="cancelBtn" class="btn-cancel">Cancel</button>
+                <button type="submit" id="submitBtn" class="btn-submit" disabled>
+                    Submit Issue
+                </button>
+            </div>
+
+            <div id="formMessage" class="form-message"></div>
+        </form>
+    </div>
+</div>
+
+<!-- Loading -->
+<div id="loadingOverlay" class="loading-overlay" style="display:none;">
+    <div class="spinner"></div>
+    <p>Uploading...</p>
 </div>
 
 <!-- Leaflet JS -->
