@@ -1,114 +1,104 @@
-from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask import Flask, render_template, request, jsonify
 from datetime import datetime
 import os
 import uuid
 from werkzeug.utils import secure_filename
-import psycopg
-from psycopg.rows import dict_row
 
 app = Flask(__name__)
 
+# Config
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
-# Upload folder (INSIDE static)
 UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Database
 DATABASE_URL = os.environ.get('DATABASE_URL')
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL not set")
+USE_SQLITE = DATABASE_URL is None
 
-def get_db_connection():
-    return psycopg.connect(DATABASE_URL, row_factory=dict_row)
+# ---------------- DB ---------------- #
+
+def get_db():
+    if USE_SQLITE:
+        import sqlite3
+        conn = sqlite3.connect('database.db')
+        conn.row_factory = sqlite3.Row
+        return conn
+    else:
+        import psycopg
+        from psycopg.rows import dict_row
+        return psycopg.connect(DATABASE_URL, row_factory=dict_row)
 
 def init_db():
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS blackspots (
-                    id SERIAL PRIMARY KEY,
-                    title TEXT,
-                    latitude DOUBLE PRECISION NOT NULL,
-                    longitude DOUBLE PRECISION NOT NULL,
-                    image_filename TEXT NOT NULL,
-                    created_at TIMESTAMP NOT NULL
-                )
-            """)
-            conn.commit()
-    print("✓ Database ready")
+    with get_db() as db:
+        cur = db.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS issues (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT,
+                issue_type TEXT NOT NULL,
+                latitude REAL NOT NULL,
+                longitude REAL NOT NULL,
+                image_filename TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+        """)
+        db.commit()
+
+# ---------------- Utils ---------------- #
 
 def allowed_file(filename):
-    return '.' in filename and \
-        filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
+# ---------------- Routes ---------------- #
 
 @app.route('/')
 def index():
     return render_template('main.html')
 
-@app.route('/health')
-def health():
-    return jsonify({'status': 'ok'})
+@app.route('/api/issues', methods=['GET'])
+def get_issues():
+    with get_db() as db:
+        cur = db.cursor()
+        cur.execute("SELECT * FROM issues ORDER BY created_at DESC")
+        rows = cur.fetchall()
+    return jsonify([dict(r) for r in rows])
 
-@app.route('/api/spots', methods=['GET'])
-def get_spots():
+@app.route('/api/issues', methods=['POST'])
+def add_issue():
     try:
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT * FROM blackspots ORDER BY created_at DESC")
-                spots = cur.fetchall()
-
-        for s in spots:
-            s['created_at'] = s['created_at'].isoformat()
-
-        return jsonify(spots)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/spots', methods=['POST'])
-def add_spot():
-    try:
-        if 'image' not in request.files:
-            return jsonify({'error': 'Image required'}), 400
-
-        file = request.files['image']
-        if file.filename == '' or not allowed_file(file.filename):
+        file = request.files.get('image')
+        if not file or not allowed_file(file.filename):
             return jsonify({'error': 'Invalid image'}), 400
 
-        latitude = float(request.form['latitude'])
-        longitude = float(request.form['longitude'])
+        issue_type = request.form.get('issue_type')
+        if issue_type not in ['garbage', 'broken_footpath', 'blocked_footpath']:
+            return jsonify({'error': 'Invalid issue type'}), 400
+
+        lat = float(request.form['latitude'])
+        lng = float(request.form['longitude'])
         title = request.form.get('title', '').strip()
 
         filename = secure_filename(file.filename)
-        unique_name = f"{datetime.now():%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:8]}_{filename}"
-        file.save(os.path.join(UPLOAD_FOLDER, unique_name))
+        unique = f"{uuid.uuid4().hex}_{filename}"
+        file.save(os.path.join(UPLOAD_FOLDER, unique))
 
-        created_at = datetime.utcnow()
+        created_at = datetime.utcnow().isoformat()
 
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    INSERT INTO blackspots
-                    (title, latitude, longitude, image_filename, created_at)
-                    VALUES (%s, %s, %s, %s, %s)
-                    RETURNING id
-                """, (title, latitude, longitude, unique_name, created_at))
-                spot_id = cur.fetchone()['id']
-                conn.commit()
+        with get_db() as db:
+            cur = db.cursor()
+            cur.execute("""
+                INSERT INTO issues
+                (title, issue_type, latitude, longitude, image_filename, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (title, issue_type, lat, lng, unique, created_at))
+            db.commit()
 
-        return jsonify({
-            'id': spot_id,
-            'title': title,
-            'latitude': latitude,
-            'longitude': longitude,
-            'image_filename': unique_name,
-            'created_at': created_at.isoformat()
-        }), 201
+        return jsonify({'success': True}), 201
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     init_db()
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    app.run(host='0.0.0.0', port=5000)

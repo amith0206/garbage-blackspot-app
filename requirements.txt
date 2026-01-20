@@ -1,11 +1,5 @@
 Flask==3.0.0
 Werkzeug==3.0.1
 gunicorn==21.2.0
-<<<<<<< HEAD
-psycopg[binary]==3.2.3
+psycopg[binary]>=3.2.3
 Pillow>=10.4.0
-
-=======
-psycopg2-binary==2.9.9
-Pillow==11.0.0
->>>>>>> 3b9221ce40a48a2cfc2138e9a5026bade6ec34c1
