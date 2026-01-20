@@ -54,7 +54,7 @@ def allowed_file(filename):
 
 @app.route('/')
 def index():
-    return render_template('main.html')
+    return render_template('index.html')
 
 @app.route('/api/issues', methods=['GET'])
 def get_issues():
