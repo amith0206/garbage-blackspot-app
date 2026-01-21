@@ -17,11 +17,12 @@ def get_db():
     return psycopg.connect(DATABASE_URL)
 
 def init_db():
+    """Initialize database - only creates table if it doesn't exist"""
     with get_db() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS issues (
                 id SERIAL PRIMARY KEY,
-                type VARCHAR(50) NOT NULL,
+                issue_type VARCHAR(50) NOT NULL,
                 description TEXT,
                 image_path TEXT NOT NULL,
                 latitude DOUBLE PRECISION NOT NULL,
@@ -40,7 +41,7 @@ def index():
 def get_issues():
     with get_db() as conn:
         cursor = conn.execute(
-            "SELECT id, type, description, image_path, latitude, longitude, status, created_at FROM issues ORDER BY created_at DESC"
+            "SELECT id, issue_type, description, image_path, latitude, longitude, status, created_at FROM issues ORDER BY created_at DESC"
         )
         rows = cursor.fetchall()
         
@@ -49,7 +50,7 @@ def get_issues():
         for row in rows:
             issues.append({
                 "id": row[0],
-                "type": row[1],
+                "type": row[1],  # Map issue_type to type for frontend
                 "description": row[2],
                 "image_path": row[3],
                 "latitude": row[4],
@@ -76,7 +77,7 @@ def add_issue():
             return jsonify({"error": "Invalid coordinates"}), 400
 
         # Validate issue type
-        issue_type = request.form.get("type")
+        issue_type = request.form.get("issue_type")  # Changed from "type"
         if not issue_type:
             return jsonify({"error": "Issue type is required"}), 400
 
@@ -89,7 +90,7 @@ def add_issue():
         # Insert into database
         with get_db() as conn:
             conn.execute("""
-                INSERT INTO issues (type, description, image_path, latitude, longitude)
+                INSERT INTO issues (issue_type, description, image_path, latitude, longitude)
                 VALUES (%s, %s, %s, %s, %s)
             """, (
                 issue_type,
