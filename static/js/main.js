@@ -24,14 +24,18 @@ const ICONS = {
 };
 
 function getMarkerIcon(type, status) {
-    const color = status === "resolved" ? "green" : "red";
+    // Use default Leaflet markers with colors
+    const iconUrl = status === "resolved" 
+        ? "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png"
+        : "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png";
 
     return L.icon({
-        iconUrl: ICONS[type] || ICONS.garbage,
-        iconSize: [32, 32],
-        iconAnchor: [16, 32],
-        popupAnchor: [0, -32],
-        className: `marker-${color}`
+        iconUrl: iconUrl,
+        shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
     });
 }
 
@@ -218,6 +222,31 @@ document.getElementById("spotForm").onsubmit = async e => {
 };
 
 // ============================
+// RESOLVE ISSUE
+// ============================
+
+async function resolveIssue(issueId) {
+    if (!confirm("Mark this issue as resolved?")) {
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/issues/${issueId}/resolve`, {
+            method: "POST"
+        });
+
+        if (res.ok) {
+            alert("Issue marked as resolved!");
+            loadIssues();
+        } else {
+            alert("Error resolving issue");
+        }
+    } catch (err) {
+        alert("Network error: " + err.message);
+    }
+}
+
+// ============================
 // LOAD ISSUES
 // ============================
 
@@ -234,15 +263,24 @@ async function loadIssues() {
         issues.forEach(issue => {
             const icon = getMarkerIcon(issue.type, issue.status);
 
+            const statusBadge = issue.status === "resolved" 
+                ? '<span style="background: #10b981; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">✓ Resolved</span>'
+                : '<span style="background: #ef4444; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">⚠ Open</span>';
+
+            const resolveButton = issue.status === "open"
+                ? `<button onclick="resolveIssue(${issue.id})" style="width: 100%; margin-top: 10px; padding: 8px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">Mark as Resolved</button>`
+                : '';
+
             const marker = L.marker([issue.latitude, issue.longitude], { icon })
                 .bindPopup(`
                     <div class="popup-content">
                         <div class="popup-title">${issue.type.replace(/_/g, " ")}</div>
-                        <img src="/${issue.image_path}" alt="Issue image">
+                        <div style="margin: 8px 0;">${statusBadge}</div>
+                        <img src="/${issue.image_path}" alt="Issue image" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin: 8px 0;">
                         <div class="popup-info">${issue.description || "No description provided"}</div>
-                        <div class="popup-coords">${issue.latitude.toFixed(5)}, ${issue.longitude.toFixed(5)}</div>
-                        <div>Status: <b>${issue.status}</b></div>
-                        <small style="color: #999;">Reported: ${new Date(issue.created_at).toLocaleDateString()}</small>
+                        <div class="popup-coords">📍 ${issue.latitude.toFixed(5)}, ${issue.longitude.toFixed(5)}</div>
+                        <small style="color: #999;">📅 ${new Date(issue.created_at).toLocaleDateString()}</small>
+                        ${resolveButton}
                     </div>
                 `);
 
