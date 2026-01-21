@@ -4,16 +4,13 @@
 <meta charset="UTF-8">
 <title>Civic Issue Mapper</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
-
 <body>
-
 <nav class="navbar">
   <h1>🗑️🚶 Civic Issue Mapper</h1>
-  <button id="openModal">+ Report Issue</button>
+  <button id="addSpotBtn" class="btn-primary">+ Report Issue</button>
 </nav>
 
 <div id="map"></div>
@@ -22,28 +19,46 @@
   <div class="modal-content">
     <span class="close">×</span>
     <h2>Report Civic Issue</h2>
+    
+    <form id="spotForm">
+      <div class="form-group">
+        <label>Issue Type *</label>
+        <select name="type" required>
+          <option value="garbage">Garbage</option>
+          <option value="broken_footpath">Broken Footpath</option>
+          <option value="illegal_flex">Illegal Flex</option>
+          <option value="pothole">Road Pothole</option>
+        </select>
+      </div>
 
-    <p class="hint">📍 Click on the map to select issue location</p>
+      <div class="form-group">
+        <label>Description</label>
+        <input type="text" name="description">
+      </div>
 
-    <form id="issueForm">
-      <label>Issue Type *</label>
-      <select name="issue_type" required>
-        <option>Garbage</option>
-        <option>Broken Footpath</option>
-        <option>Illegal Flex</option>
-        <option>Road Pothole</option>
-      </select>
+      <div class="form-group">
+        <label>Location *</label>
+        <div class="location-buttons">
+          <button type="button" id="pickMapBtn" class="btn-secondary">Pick on Map</button>
+          <button type="button" id="useGpsBtn" class="btn-secondary">Use GPS</button>
+        </div>
+        <div id="coordsDisplay" class="coords-display"></div>
+        <div id="selectionMapContainer" style="display:none;"></div>
+      </div>
 
-      <label>Description</label>
-      <input type="text" name="description">
+      <div class="form-group">
+        <label>Upload Photo *</label>
+        <input type="file" name="image" id="image" accept="image/*" required>
+        <div id="imagePreview" class="image-preview"></div>
+      </div>
 
-      <label>Upload Photo *</label>
-      <input type="file" name="image" id="imageInput" required>
-      <img id="preview">
-
-      <button type="submit">Submit</button>
+      <button type="submit" class="btn-primary">Submit Issue</button>
     </form>
   </div>
+</div>
+
+<div id="loadingOverlay" class="loading-overlay">
+  <div>Submitting issue...</div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
