@@ -1,60 +1,148 @@
-body {
+* {
     margin: 0;
-    font-family: system-ui;
+    padding: 0;
+    box-sizing: border-box;
 }
+
+body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow: hidden;
+}
+
+/* ================= NAVBAR ================= */
 
 .navbar {
+    height: 70px;
     background: linear-gradient(135deg, #667eea, #764ba2);
     color: white;
-    padding: 1rem;
     display: flex;
+    align-items: center;
+    padding: 0 1.5rem;
     justify-content: space-between;
+    z-index: 1000;
+    position: relative;
 }
 
-#map {
-    height: calc(100vh - 70px);
-}
-
-button {
-    padding: 0.6rem 1rem;
-    border-radius: 6px;
+.btn-primary {
+    background: white;
+    color: #667eea;
     border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    font-weight: 600;
     cursor: pointer;
 }
+
+/* ================= MAP ================= */
+
+#map {
+    position: absolute;
+    top: 70px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* ================= MODAL ================= */
 
 .modal {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 3000;
 }
 
 .modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     background: white;
     width: 90%;
     max-width: 420px;
-    margin: 5% auto;
-    padding: 1rem;
-    border-radius: 12px;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 1.2rem;
+    border-radius: 14px;
 }
 
 .close {
     float: right;
     cursor: pointer;
-    font-size: 20px;
+    font-size: 1.5rem;
 }
 
-.hint {
-    background: #eff6ff;
-    border-left: 4px solid #3b82f6;
-    padding: 8px;
-    font-size: 0.9rem;
-    margin-bottom: 10px;
+/* ================= FORM ================= */
+
+.form-group {
+    margin-bottom: 1rem;
 }
 
-img#preview {
+input,
+select,
+button {
+    width: 100%;
+    padding: 0.6rem;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+}
+
+.location-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-secondary {
+    background: #eee;
+    cursor: pointer;
+}
+
+.coords-display {
+    font-size: 0.85rem;
+    margin-top: 0.5rem;
+}
+
+.coords-display.active {
+    color: green;
+}
+
+/* ================= IMAGE PREVIEW ================= */
+
+.image-preview img {
     max-width: 100%;
     max-height: 200px;
-    margin-top: 10px;
+    object-fit: contain;
+    margin-top: 0.5rem;
     border-radius: 8px;
+}
+
+/* ================= LOADING ================= */
+
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    z-index: 4000;
+}
+
+/* ================= POPUPS ================= */
+
+.popup-content img {
+    max-width: 100%;
+    border-radius: 8px;
+}
+
+/* ================= MARKER COLORS ================= */
+
+.marker-red {
+    filter: hue-rotate(330deg);
+}
+
+.marker-green {
+    filter: hue-rotate(90deg);
 }
