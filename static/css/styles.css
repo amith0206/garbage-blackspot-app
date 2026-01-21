@@ -1,48 +1,51 @@
-.modal {
-  display: none;
-  position: fixed;
-  z-index: 1000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.6);
+body {
+    margin: 0;
+    font-family: system-ui;
 }
 
-.modal-content {
-  background: #fff;
-  margin: 10% auto;
-  padding: 20px;
-  width: 90%;
-  max-width: 400px;
-  border-radius: 10px;
+.navbar {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 1rem;
+    display: flex;
+    justify-content: space-between;
 }
 
-.close {
-  float: right;
-  font-size: 22px;
-  cursor: pointer;
-}
-
-.btn-primary {
-  padding: 8px 14px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.btn-submit {
-  margin-top: 10px;
-  padding: 10px;
-  width: 100%;
-}
-
-/* 🔒 HARD SAFETY: MAP MUST ALWAYS RENDER */
-html, body {
-    height: 100%;
+button {
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
 }
 
 #map {
-    min-height: calc(100vh - 73px);
-    width: 100%;
+    height: calc(100vh - 70px);
 }
 
+/* MODAL */
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background: white;
+    width: 90%;
+    max-width: 400px;
+    margin: 5% auto;
+    padding: 1rem;
+    border-radius: 12px;
+}
+
+.close {
+    float: right;
+    cursor: pointer;
+}
+
+img#preview {
+    max-width: 100%;
+    margin-top: 10px;
+    border-radius: 8px;
+}
