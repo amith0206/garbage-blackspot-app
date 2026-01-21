@@ -17,17 +17,17 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 // ============================
 
 const ICONS = {
-    garbage: "static/icons/garbage.png",
-    broken_footpath: "static/icons/broken.png",
-    illegal_flex: "static/icons/flex.png",
-    pothole: "static/icons/pothole.png"
+    garbage: "/static/icons/garbage.png",
+    broken_footpath: "/static/icons/broken.png",
+    illegal_flex: "/static/icons/flex.png",
+    pothole: "/static/icons/pothole.png"
 };
 
 function getMarkerIcon(type, status) {
     const color = status === "resolved" ? "green" : "red";
 
     return L.icon({
-        iconUrl: ICONS[type],
+        iconUrl: ICONS[type] || ICONS.garbage,
         iconSize: [32, 32],
         iconAnchor: [16, 32],
         popupAnchor: [0, -32],
@@ -56,6 +56,13 @@ modal.onclick = e => {
 
 function closeModal() {
     modal.style.display = "none";
+    document.getElementById("coordsDisplay").classList.remove("active");
+    document.getElementById("coordsDisplay").innerText = "";
+    if (tempMarker) {
+        map.removeLayer(tempMarker);
+        tempMarker = null;
+    }
+    selectedLatLng = null;
     enableMap();
 }
 
@@ -92,14 +99,25 @@ let selectedLatLng = null;
 let tempMarker = null;
 
 document.getElementById("pickMapBtn").onclick = () => {
-    document.getElementById("selectionMapContainer").style.display = "block";
-
+    alert("Click anywhere on the map to select location");
+    closeModal();
+    
     map.once("click", e => {
         selectedLatLng = e.latlng;
 
         if (tempMarker) map.removeLayer(tempMarker);
-        tempMarker = L.marker(selectedLatLng).addTo(map);
+        tempMarker = L.marker(selectedLatLng, {
+            icon: L.icon({
+                iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+            })
+        }).addTo(map);
 
+        // Reopen modal
+        modal.style.display = "block";
         document.getElementById("coordsDisplay").innerText =
             `Lat: ${selectedLatLng.lat.toFixed(5)}, Lng: ${selectedLatLng.lng.toFixed(5)}`;
         document.getElementById("coordsDisplay").classList.add("active");
@@ -107,32 +125,54 @@ document.getElementById("pickMapBtn").onclick = () => {
 };
 
 document.getElementById("useGpsBtn").onclick = () => {
-    navigator.geolocation.getCurrentPosition(pos => {
-        selectedLatLng = {
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude
-        };
+    if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser");
+        return;
+    }
 
-        if (tempMarker) map.removeLayer(tempMarker);
-        tempMarker = L.marker(selectedLatLng).addTo(map);
+    navigator.geolocation.getCurrentPosition(
+        pos => {
+            selectedLatLng = {
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude
+            };
 
-        document.getElementById("coordsDisplay").innerText =
-            `Lat: ${selectedLatLng.lat.toFixed(5)}, Lng: ${selectedLatLng.lng.toFixed(5)}`;
-        document.getElementById("coordsDisplay").classList.add("active");
-    });
+            if (tempMarker) map.removeLayer(tempMarker);
+            tempMarker = L.marker(selectedLatLng, {
+                icon: L.icon({
+                    iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41]
+                })
+            }).addTo(map);
+
+            map.setView(selectedLatLng, 15);
+
+            document.getElementById("coordsDisplay").innerText =
+                `Lat: ${selectedLatLng.lat.toFixed(5)}, Lng: ${selectedLatLng.lng.toFixed(5)}`;
+            document.getElementById("coordsDisplay").classList.add("active");
+        },
+        err => {
+            alert("Unable to get your location: " + err.message);
+        }
+    );
 };
 
 // ============================
-// IMAGE PREVIEW (FIXED SIZE)
+// IMAGE PREVIEW
 // ============================
 
 document.getElementById("image").addEventListener("change", e => {
     const preview = document.getElementById("imagePreview");
     preview.innerHTML = "";
 
-    const img = document.createElement("img");
-    img.src = URL.createObjectURL(e.target.files[0]);
-    preview.appendChild(img);
+    if (e.target.files && e.target.files[0]) {
+        const img = document.createElement("img");
+        img.src = URL.createObjectURL(e.target.files[0]);
+        preview.appendChild(img);
+    }
 });
 
 // ============================
@@ -143,30 +183,37 @@ document.getElementById("spotForm").onsubmit = async e => {
     e.preventDefault();
 
     if (!selectedLatLng) {
-        alert("Please select a location");
+        alert("Please select a location using 'Pick on Map' or 'Use GPS'");
         return;
     }
 
     const formData = new FormData(e.target);
-    formData.append("lat", selectedLatLng.lat);
-    formData.append("lng", selectedLatLng.lng);
+    formData.append("latitude", selectedLatLng.lat);
+    formData.append("longitude", selectedLatLng.lng);
 
     document.getElementById("loadingOverlay").style.display = "flex";
 
-    const res = await fetch("/api/issues", {
-        method: "POST",
-        body: formData
-    });
+    try {
+        const res = await fetch("/api/issues", {
+            method: "POST",
+            body: formData
+        });
 
-    document.getElementById("loadingOverlay").style.display = "none";
+        document.getElementById("loadingOverlay").style.display = "none";
 
-    if (res.ok) {
-        closeModal();
-        loadIssues();
-        e.target.reset();
-        document.getElementById("imagePreview").innerHTML = "";
-    } else {
-        alert("Error submitting issue");
+        if (res.ok) {
+            alert("Issue reported successfully!");
+            closeModal();
+            loadIssues();
+            e.target.reset();
+            document.getElementById("imagePreview").innerHTML = "";
+        } else {
+            const error = await res.json();
+            alert("Error submitting issue: " + (error.error || "Unknown error"));
+        }
+    } catch (err) {
+        document.getElementById("loadingOverlay").style.display = "none";
+        alert("Network error: " + err.message);
     }
 };
 
@@ -174,25 +221,37 @@ document.getElementById("spotForm").onsubmit = async e => {
 // LOAD ISSUES
 // ============================
 
+let markersLayer = L.layerGroup().addTo(map);
+
 async function loadIssues() {
-    const res = await fetch("/api/issues");
-    const issues = await res.json();
+    try {
+        const res = await fetch("/api/issues");
+        const issues = await res.json();
 
-    issues.forEach(issue => {
-        const icon = getMarkerIcon(issue.type, issue.status);
+        // Clear existing markers
+        markersLayer.clearLayers();
 
-        L.marker([issue.lat, issue.lng], { icon })
-            .addTo(map)
-            .bindPopup(`
-                <div class="popup-content">
-                    <div class="popup-title">${issue.type.replace("_", " ")}</div>
-                    <img src="${issue.image_url}">
-                    <div class="popup-info">${issue.description || ""}</div>
-                    <div class="popup-coords">${issue.lat}, ${issue.lng}</div>
-                    <div>Status: <b>${issue.status}</b></div>
-                </div>
-            `);
-    });
+        issues.forEach(issue => {
+            const icon = getMarkerIcon(issue.type, issue.status);
+
+            const marker = L.marker([issue.latitude, issue.longitude], { icon })
+                .bindPopup(`
+                    <div class="popup-content">
+                        <div class="popup-title">${issue.type.replace(/_/g, " ")}</div>
+                        <img src="/${issue.image_path}" alt="Issue image">
+                        <div class="popup-info">${issue.description || "No description provided"}</div>
+                        <div class="popup-coords">${issue.latitude.toFixed(5)}, ${issue.longitude.toFixed(5)}</div>
+                        <div>Status: <b>${issue.status}</b></div>
+                        <small style="color: #999;">Reported: ${new Date(issue.created_at).toLocaleDateString()}</small>
+                    </div>
+                `);
+
+            markersLayer.addLayer(marker);
+        });
+    } catch (err) {
+        console.error("Error loading issues:", err);
+    }
 }
 
+// Load issues on page load
 loadIssues();
