@@ -1,33 +1,52 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Civic Issue Mapper</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+<meta charset="UTF-8">
+<title>Civic Issue Mapper</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
+
 <body>
 
 <nav class="navbar">
-  <h2>🗑️🚶 Civic Issue Mapper</h2>
+  <h1>🗑️🚶 Civic Issue Mapper</h1>
   <button id="openModal">+ Report Issue</button>
 </nav>
 
 <div id="map"></div>
 
 <div id="modal" class="modal">
-  <form id="issueForm">
-    <select id="issueType" required>
-      <option value="garbage">🗑️ Garbage</option>
-      <option value="broken_footpath">🚶 Broken Footpath</option>
-      <option value="blocked_footpath">🚧 Blocked Footpath</option>
-    </select>
-    <input type="text" id="title" placeholder="Optional description"/>
-    <input type="file" id="image" required/>
-    <button type="submit">Submit</button>
-  </form>
+  <div class="modal-content">
+    <span class="close">×</span>
+    <h2>Report Civic Issue</h2>
+
+    <p class="hint">📍 Click on the map to select issue location</p>
+
+    <form id="issueForm">
+      <label>Issue Type *</label>
+      <select name="issue_type" required>
+        <option>Garbage</option>
+        <option>Broken Footpath</option>
+        <option>Illegal Flex</option>
+        <option>Road Pothole</option>
+      </select>
+
+      <label>Description</label>
+      <input type="text" name="description">
+
+      <label>Upload Photo *</label>
+      <input type="file" name="image" id="imageInput" required>
+      <img id="preview">
+
+      <button type="submit">Submit</button>
+    </form>
+  </div>
 </div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>

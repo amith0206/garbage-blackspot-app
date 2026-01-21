@@ -1,104 +1,79 @@
-from flask import Flask, render_template, request, jsonify
-from datetime import datetime
 import os
 import uuid
+from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename
+import psycopg
 
 app = Flask(__name__)
 
-# Config
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-
-UPLOAD_FOLDER = os.path.join(app.root_path, 'static', 'uploads')
+UPLOAD_FOLDER = "static/uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-DATABASE_URL = os.environ.get('DATABASE_URL')
-USE_SQLITE = DATABASE_URL is None
-
-# ---------------- DB ---------------- #
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL not set")
 
 def get_db():
-    if USE_SQLITE:
-        import sqlite3
-        conn = sqlite3.connect('database.db')
-        conn.row_factory = sqlite3.Row
-        return conn
-    else:
-        import psycopg
-        from psycopg.rows import dict_row
-        return psycopg.connect(DATABASE_URL, row_factory=dict_row)
+    return psycopg.connect(DATABASE_URL)
 
 def init_db():
-    with get_db() as db:
-        cur = db.cursor()
-        cur.execute("""
+    with get_db() as conn:
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS issues (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT,
-                issue_type TEXT NOT NULL,
-                latitude REAL NOT NULL,
-                longitude REAL NOT NULL,
-                image_filename TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            )
+                id SERIAL PRIMARY KEY,
+                issue_type VARCHAR(50) NOT NULL,
+                description TEXT,
+                image_path TEXT NOT NULL,
+                latitude DOUBLE PRECISION NOT NULL,
+                longitude DOUBLE PRECISION NOT NULL,
+                status VARCHAR(20) DEFAULT 'open',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
         """)
-        db.commit()
 
-# ---------------- Utils ---------------- #
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
-
-# ---------------- Routes ---------------- #
-
-@app.route('/')
+@app.route("/")
 def index():
-    return render_template('main.html')
+    return render_template("index.html")
 
-@app.route('/api/issues', methods=['GET'])
+@app.route("/api/issues", methods=["GET"])
 def get_issues():
-    with get_db() as db:
-        cur = db.cursor()
-        cur.execute("SELECT * FROM issues ORDER BY created_at DESC")
-        rows = cur.fetchall()
-    return jsonify([dict(r) for r in rows])
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM issues ORDER BY created_at DESC"
+        ).fetchall()
+        return jsonify([dict(r) for r in rows])
 
-@app.route('/api/issues', methods=['POST'])
+@app.route("/api/issues", methods=["POST"])
 def add_issue():
-    try:
-        file = request.files.get('image')
-        if not file or not allowed_file(file.filename):
-            return jsonify({'error': 'Invalid image'}), 400
+    image = request.files.get("image")
+    if not image:
+        return jsonify({"error": "Image required"}), 400
 
-        issue_type = request.form.get('issue_type')
-        if issue_type not in ['garbage', 'broken_footpath', 'blocked_footpath']:
-            return jsonify({'error': 'Invalid issue type'}), 400
+    filename = secure_filename(image.filename)
+    unique = f"{uuid.uuid4()}_{filename}"
+    path = os.path.join(UPLOAD_FOLDER, unique)
+    image.save(path)
 
-        lat = float(request.form['latitude'])
-        lng = float(request.form['longitude'])
-        title = request.form.get('title', '').strip()
+    with get_db() as conn:
+        conn.execute("""
+            INSERT INTO issues (issue_type, description, image_path, latitude, longitude)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (
+            request.form["issue_type"],
+            request.form.get("description", ""),
+            path,
+            float(request.form["latitude"]),
+            float(request.form["longitude"])
+        ))
 
-        filename = secure_filename(file.filename)
-        unique = f"{uuid.uuid4().hex}_{filename}"
-        file.save(os.path.join(UPLOAD_FOLDER, unique))
+    return jsonify({"success": True})
 
-        created_at = datetime.utcnow().isoformat()
+@app.route("/api/issues/<int:id>/resolve", methods=["POST"])
+def resolve_issue(id):
+    with get_db() as conn:
+        conn.execute("UPDATE issues SET status='resolved' WHERE id=%s", (id,))
+    return jsonify({"success": True})
 
-        with get_db() as db:
-            cur = db.cursor()
-            cur.execute("""
-                INSERT INTO issues
-                (title, issue_type, latitude, longitude, image_filename, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (title, issue_type, lat, lng, unique, created_at))
-            db.commit()
-
-        return jsonify({'success': True}), 201
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     init_db()
-    app.run(host='0.0.0.0', port=5000)
+    app.run()
