@@ -28,8 +28,15 @@ def get_issues():
     try:
         with get_db() as conn:
             rows = conn.execute("""
-                SELECT id, issue_type, description, image_path,
-                       latitude, longitude, status, created_at
+                SELECT
+                    id,
+                    issue_type,
+                    COALESCE(description, ''),
+                    image_path,
+                    latitude,
+                    longitude,
+                    COALESCE(status, 'open'),
+                    created_at
                 FROM issues
                 ORDER BY created_at DESC
             """).fetchall()
@@ -38,7 +45,7 @@ def get_issues():
             {
                 "id": r[0],
                 "type": r[1],
-                "description": r[2] or "",
+                "description": r[2],
                 "image_path": r[3],
                 "latitude": r[4],
                 "longitude": r[5],
@@ -97,7 +104,7 @@ def resolve_issue(issue_id):
             conn.commit()
         return jsonify({"success": True})
     except Exception as e:
-        app.logger.error(e)
+        app.logger.error(f"Resolve error: {e}")
         return jsonify({"error": "Resolve failed"}), 500
 
 if __name__ == "__main__":
