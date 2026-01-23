@@ -6,44 +6,21 @@ import psycopg
 
 app = Flask(__name__)
 
+# ================= CONFIG =================
 UPLOAD_FOLDER = "static/uploads"
-ICONS_FOLDER = "static/icons"
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 5MB limit
+
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(ICONS_FOLDER, exist_ok=True)
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL environment variable not set")
+    raise RuntimeError("DATABASE_URL not set")
 
 def get_db():
     return psycopg.connect(DATABASE_URL)
 
-def init_db():
-    """Initialize or update database schema"""
-    with get_db() as conn:
-        # Drop existing table to fix schema issues
-        try:
-            conn.execute("DROP TABLE IF EXISTS issues CASCADE;")
-            app.logger.info("Dropped existing issues table")
-        except Exception as e:
-            app.logger.warning(f"Drop table note: {e}")
-        
-        # Create fresh table with correct schema
-        conn.execute("""
-            CREATE TABLE issues (
-                id SERIAL PRIMARY KEY,
-                issue_type VARCHAR(50) NOT NULL,
-                description TEXT,
-                image_path TEXT NOT NULL,
-                latitude DOUBLE PRECISION NOT NULL,
-                longitude DOUBLE PRECISION NOT NULL,
-                status VARCHAR(20) DEFAULT 'open',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-        conn.commit()
-        app.logger.info("Database schema created successfully")
-
+# ================= ROUTES =================
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -52,74 +29,63 @@ def index():
 def get_issues():
     try:
         with get_db() as conn:
-            cursor = conn.execute("""
-                SELECT id, issue_type, description, image_path, latitude, longitude, status, created_at
-                FROM issues 
+            rows = conn.execute("""
+                SELECT id, issue_type, description, image_path,
+                       latitude, longitude, status, created_at
+                FROM issues
                 ORDER BY created_at DESC
-            """)
-            rows = cursor.fetchall()
-            
-            issues = []
-            for row in rows:
-                issue = {
-                    "id": row[0],
-                    "type": row[1],
-                    "description": row[2] or "",
-                    "image_path": row[3],
-                    "latitude": row[4],
-                    "longitude": row[5],
-                    "status": row[6] or "open",
-                    "created_at": row[7].isoformat() if row[7] else None
-                }
-                issues.append(issue)
-            
-            return jsonify(issues)
+            """).fetchall()
+
+        return jsonify([
+            {
+                "id": r[0],
+                "type": r[1],
+                "description": r[2] or "",
+                "image_path": r[3],
+                "latitude": r[4],
+                "longitude": r[5],
+                "status": r[6],
+                "created_at": r[7].isoformat()
+            } for r in rows
+        ])
+
     except Exception as e:
-        app.logger.error(f"Error fetching issues: {str(e)}")
+        app.logger.error(f"Fetch error: {e}")
         return jsonify({"error": "Failed to fetch issues"}), 500
+
 
 @app.route("/api/issues", methods=["POST"])
 def add_issue():
     try:
-        # Validate image
         image = request.files.get("image")
-        if not image:
-            return jsonify({"error": "Image is required"}), 400
+        if not image or image.filename == "":
+            return jsonify({"error": "Image required"}), 400
 
-        # Validate coordinates
-        try:
-            latitude = float(request.form.get("latitude"))
-            longitude = float(request.form.get("longitude"))
-        except (TypeError, ValueError):
-            return jsonify({"error": "Invalid coordinates"}), 400
-
-        # Validate issue type
         issue_type = request.form.get("issue_type")
-        if not issue_type:
-            return jsonify({"error": "Issue type is required"}), 400
-
-        # Save image
-        filename = secure_filename(image.filename)
-        unique_filename = f"{uuid.uuid4()}_{filename}"
-        image_path = os.path.join(UPLOAD_FOLDER, unique_filename)
-        image.save(image_path)
-
-        # Get description
         description = request.form.get("description", "")
 
-        # Insert into database
+        latitude = float(request.form["latitude"])
+        longitude = float(request.form["longitude"])
+
+        filename = secure_filename(image.filename)
+        unique_name = f"{uuid.uuid4().hex}_{filename}"
+        save_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_name)
+        image.save(save_path)
+
         with get_db() as conn:
             conn.execute("""
-                INSERT INTO issues (issue_type, description, image_path, latitude, longitude, status)
-                VALUES (%s, %s, %s, %s, %s, %s)
-            """, (issue_type, description, image_path, latitude, longitude, "open"))
+                INSERT INTO issues
+                (issue_type, description, image_path, latitude, longitude, status)
+                VALUES (%s, %s, %s, %s, %s, 'open')
+            """, (issue_type, description, save_path, latitude, longitude))
             conn.commit()
 
-        return jsonify({"success": True, "message": "Issue reported successfully"})
+        return jsonify({"success": True})
 
     except Exception as e:
-        app.logger.error(f"Error adding issue: {str(e)}")
-        return jsonify({"error": "Internal server error"}), 500
+        app.logger.error(f"Upload error: {e}")
+        return jsonify({"error": "Upload failed"}), 500
+
 
 @app.route("/api/issues/<int:issue_id>/resolve", methods=["POST"])
 def resolve_issue(issue_id):
@@ -130,12 +96,11 @@ def resolve_issue(issue_id):
                 (issue_id,)
             )
             conn.commit()
-            return jsonify({"success": True})
-                
+        return jsonify({"success": True})
     except Exception as e:
-        app.logger.error(f"Error resolving issue: {str(e)}")
-        return jsonify({"error": "Internal server error"}), 500
+        app.logger.error(e)
+        return jsonify({"error": "Resolve failed"}), 500
+
 
 if __name__ == "__main__":
-    init_db()
     app.run(debug=True)
