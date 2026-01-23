@@ -6,10 +6,9 @@ import psycopg
 
 app = Flask(__name__)
 
-# ================= CONFIG =================
 UPLOAD_FOLDER = "static/uploads"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 5MB limit
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 5MB
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -20,7 +19,6 @@ if not DATABASE_URL:
 def get_db():
     return psycopg.connect(DATABASE_URL)
 
-# ================= ROUTES =================
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -53,7 +51,6 @@ def get_issues():
         app.logger.error(f"Fetch error: {e}")
         return jsonify({"error": "Failed to fetch issues"}), 500
 
-
 @app.route("/api/issues", methods=["POST"])
 def add_issue():
     try:
@@ -62,6 +59,9 @@ def add_issue():
             return jsonify({"error": "Image required"}), 400
 
         issue_type = request.form.get("issue_type")
+        if not issue_type:
+            return jsonify({"error": "Issue type required"}), 400
+
         description = request.form.get("description", "")
 
         latitude = float(request.form["latitude"])
@@ -86,7 +86,6 @@ def add_issue():
         app.logger.error(f"Upload error: {e}")
         return jsonify({"error": "Upload failed"}), 500
 
-
 @app.route("/api/issues/<int:issue_id>/resolve", methods=["POST"])
 def resolve_issue(issue_id):
     try:
@@ -100,7 +99,6 @@ def resolve_issue(issue_id):
     except Exception as e:
         app.logger.error(e)
         return jsonify({"error": "Resolve failed"}), 500
-
 
 if __name__ == "__main__":
     app.run(debug=True)
