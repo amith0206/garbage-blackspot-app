@@ -1,67 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
 <title>Civic Issue Mapper</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
+
+<div id="auth">
+  <input id="email" placeholder="Enter email">
+  <button onclick="sendOtp()">Send OTP</button>
+  <input id="otp" placeholder="Enter OTP">
+  <button onclick="verifyOtp()">Verify</button>
+</div>
+
 <nav class="navbar">
-  <h1>🗑️🚶 Civic Issue Mapper</h1>
-  <button id="addSpotBtn" class="btn-primary">+ Report Issue</button>
+  <h1>Civic Issue Mapper</h1>
+  <button id="addSpotBtn">+ Report</button>
 </nav>
 
 <div id="map"></div>
-
-<div id="modal" class="modal">
-  <div class="modal-content">
-    <span class="close">×</span>
-    <h2>Report Civic Issue</h2>
-    
-    <form id="spotForm">
-      <div class="form-group">
-        <label>Issue Type *</label>
-        <select name="issue_type" required>
-          <option value="garbage">Garbage</option>
-          <option value="broken_footpath">Broken Footpath</option>
-          <option value="illegal_flex">Illegal Flex</option>
-          <option value="pothole">Road Pothole</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label>Description</label>
-        <input type="text" name="description">
-      </div>
-
-      <div class="form-group">
-        <label>Location *</label>
-        <div class="location-buttons">
-          <button type="button" id="pickMapBtn" class="btn-secondary">Pick on Map</button>
-          <button type="button" id="useGpsBtn" class="btn-secondary">Use GPS</button>
-        </div>
-        <div id="coordsDisplay" class="coords-display"></div>
-        <div id="selectionMapContainer" style="display:none;"></div>
-      </div>
-
-      <div class="form-group">
-        <label>Upload Photo *</label>
-        <input type="file" name="image" id="image" accept="image/*" required>
-        <div id="imagePreview" class="image-preview"></div>
-      </div>
-
-      <button type="submit" class="btn-primary">Submit Issue</button>
-    </form>
-  </div>
-</div>
-
-<div id="loadingOverlay" class="loading-overlay">
-  <div>Submitting issue...</div>
-</div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
+
