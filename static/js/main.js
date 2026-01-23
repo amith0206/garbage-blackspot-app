@@ -276,7 +276,7 @@ async function loadIssues() {
                     <div class="popup-content">
                         <div class="popup-title">${issue.type.replace(/_/g, " ")}</div>
                         <div style="margin: 8px 0;">${statusBadge}</div>
-                        <img src="/${issue.image_path}" alt="Issue image" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin: 8px 0;">
+                        <img src="${issue.image_path}" alt="Issue image" style="width: 100%; max-height: 200px; object-fit: cover; border-radius: 8px; margin: 8px 0;">
                         <div class="popup-info">${issue.description || "No description provided"}</div>
                         <div class="popup-coords">📍 ${issue.latitude.toFixed(5)}, ${issue.longitude.toFixed(5)}</div>
                         <small style="color: #999;">📅 ${new Date(issue.created_at).toLocaleDateString()}</small>
